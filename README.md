@@ -5,3 +5,6 @@ To clone with submodules use `git clone --recurse-submodules https://github.com/
 
 See the src/main.adb file for comments on how to use this template
 
+
+TO-DO:
+j : Add changes to motor driver and nfr0548 to the new forked submodule
