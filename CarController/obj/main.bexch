@@ -1,0 +1,22 @@
+[GENERATED OBJECT FILE]
+b__main.o
+[PROJECT FILES]
+C:\Users\Christopher\Desktop\DADABOYZREPO\Ada-Embedded-Project-MicroBitV2\CarController\default.gpr
+20231101133518 4a8f7304d35a43be173b7fc34472252f
+C:\Users\Christopher\Desktop\DADABOYZREPO\Ada-Embedded-Project-MicroBitV2\Ada_Drivers_Library_DADA\boards\MicroBit_v2\microbit_v2_full.gpr
+20231018074856 d8307e7b3bb882425579e4c4e1b8fecd
+[BOUND OBJECT FILES]
+C:\Users\Christopher\Desktop\DADABOYZREPO\Ada-Embedded-Project-MicroBitV2\CarController\obj\main.o
+[GENERATED SOURCE FILES]
+b__main.ads
+b__main.adb
+b__main.ali
+[RESULTING OPTIONS]
+-LC:\Users\Christopher\Desktop\DADABOYZREPO\Ada-Embedded-Project-MicroBitV2\CarController\obj\
+-LC:\Users\Christopher\Desktop\DADABOYZREPO\Ada-Embedded-Project-MicroBitV2\CarController\obj\
+-LC:\Users\Christopher\Desktop\DADABOYZREPO\Ada-Embedded-Project-MicroBitV2\Ada_Drivers_Library_DADA\boards\MicroBit_v2\obj\full_lib_Debug\
+-LC:\gnat\2021-arm-elf\arm-eabi\lib\gnat\ravenscar-full-nrf52833\adalib\
+-static
+-static-libgcc
+C:\gnat\2021-arm-elf\arm-eabi\lib\gnat\ravenscar-full-nrf52833\adalib\libgnarl.a
+C:\gnat\2021-arm-elf\arm-eabi\lib\gnat\ravenscar-full-nrf52833\adalib\libgnat.a
