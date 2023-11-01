@@ -15,11 +15,13 @@ package TaskControl is
     task Motor_Control with Priority => 2;
     task Stop with Priority => 1;
     
+    type States is (Idle, Radio, Forwarding, Avoiding);
+    state : States := Idle;
+    
     rf_pwm : Integer := 0;
     rb_pwm : Integer := 0;
     lf_pwm : Integer := 0;
     lb_pwm : Integer := 0;
-    
     
     distance_front : Distance_cm := 0;
     distance_left  : Distance_cm := 0;
