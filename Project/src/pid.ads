@@ -4,17 +4,18 @@ with HAL; use HAL;
 
 generic
     
-    Kp : Integer;
-    Ki : Integer;
-    Kd : Integer;
+    Kp : Float;
+    Ki : Float;
+    Kd : Float;
+    name : String;
     
 package PID is
     
-    m_Kp : Integer := Kp;
-    m_Ki : Integer := Ki;
-    m_Kd : Integer := Kd;
+    m_Kp : Float := Kp;
+    m_Ki : Float := Ki;
+    m_Kd : Float := Kd;
     
-    function regulate(target : in Distance_cm; actual : in Distance_cm) return Integer;
+    function regulate(target : in Integer; actual : in Integer) return Integer;
     
 private
     

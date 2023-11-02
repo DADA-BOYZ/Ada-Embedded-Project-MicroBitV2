@@ -4,12 +4,10 @@ with Ada.Real_Time; use Ada.Real_Time;
 with MicroBit.Console; use MicroBit.Console;
 
 package body PID is
+   
     
-    
-    
-    
-    function regulate(target : in Distance_cm; actual : in Distance_cm) return Integer is
-        error : Distance_cm;
+    function regulate(target : in Integer; actual : in Integer) return Integer is
+        error : Integer;
         --dt : Ada.Real_Time.Time_Span;
         -- d_error : Distance_cm;
         P : Integer;
@@ -18,12 +16,12 @@ package body PID is
         
     begin
         
-        
         --dt := time - m_prev_time;
-        error := target - actual;
+        error := Integer(target) - Integer(actual);
+       
         -- d_error := m_prev_error - error;
         
-        P := Kp * Integer(error);
+        P := Integer(Kp * Float(error));
         --D := dt / (1/d_error);
         
         result := P;
