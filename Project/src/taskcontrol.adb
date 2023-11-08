@@ -5,6 +5,7 @@ with Ada.Real_Time; use Ada.Real_Time;
 with MicroBit.Console; use MicroBit.Console;
 with LSM303AGR; use LSM303AGR;
 with PID;
+with HAL; use HAL;
 use MicroBit;
 
 
@@ -14,51 +15,68 @@ package body TaskControl is
     -- Sense
     task body Read_Distance_Sensors is
         package front_sensor is new Ultrasonic(MB_P2,  MB_P0);
-        package left_sensor  is new Ultrasonic(MB_P14,MB_P13);
-        package right_sensor is new Ultrasonic(MB_P1,  MB_P8);
+        package left_sensor  is new Ultrasonic(MB_P15, MB_P13);
+        package right_sensor is new Ultrasonic(MB_P1,  MB_P16);
+        min_d : Distance_cm;
         timer : Time;
-        PERIOD : Time_Span := Milliseconds(100);
+        PERIOD : Time_Span := Milliseconds(80);
         dt : Time_Span;
     begin
         loop
+            distance.front := front_sensor.Read;
+            
+            distance.left  := left_sensor.Read;
             timer := Clock;
-            distance_front := front_sensor.Read;
-            distance_left  := left_sensor.Read;
-            distance_right := right_sensor.Read;
-            
-            if distance_front = 0 or distance_front > 40
+            distance.right := right_sensor.Read;
+            dt := Clock - timer;
+            if distance.front = 0 or distance.front > 40
             then
-                distance_front := 40;
+                distance.front := 40;
             end if;
-            if distance_left = 0 or distance_left > 40
+            if distance.left = 0 or distance.left > 40
             then
-                distance_left := 40;
+                distance.left := 40;
             end if;
-            if distance_right = 0 or distance_right > 40
+            if distance.right = 0 or distance.right > 40
             then
-                distance_right := 40;
+                distance.right := 40;
             end if;
+           
             
-            Put_Line("state=" & state'Image);
+            min_d := 41;
+            if (distance.right < min_d)
+            then
+                min_d := distance.right;
+            end if;
+            if (distance.front < min_d)
+            then
+                min_d := distance.front;
+            end if;
+            if (distance.left < min_d)
+            then
+                min_d := distance.left;
+            end if;
+              
             
-            if (distance_left <= 20)
+            if (distance.right <= 20 and distance.right = min_d)
             then
-                state := Avoiding;
-            elsif (distance_front <= 20)
+                state := AvoidingRight;
+            elsif (distance.front <= 20 and distance.front = min_d)
             then
-                state := Avoiding;
-            elsif (distance_right <= 20)
+                state := AvoidingFront;
+            elsif (distance.left <= 20 and distance.left = min_d)
             then
-                state := Avoiding;
+                state := AvoidingLeft;
             else
                 state := Idle;
             end if;
+            Put_Line("state=" & state'Image);
             
-            dt := Clock - timer;
-            --Put_Line("RDS:");
-            --Put_Line("PERIOD= " & To_Duration(PERIOD)'Image);
-            --Put_Line("dt= " & To_Duration(dt)'Image);
-            --Put_Line("diff= " & To_Duration(PERIOD - dt)'Image);
+            
+            Put_Line("RDS:");
+            Put_Line("PERIOD= " & To_Duration(PERIOD)'Image);
+            Put_Line("dt= " & To_Duration(dt)'Image);
+            Put_Line("diff= " & To_Duration(PERIOD - dt)'Image);
             delay until Clock + PERIOD;
         end loop;
     end Read_Distance_Sensors;
@@ -67,7 +85,7 @@ package body TaskControl is
     task body Read_Radio is
         
         RXdata : RadioData;
-        X, Y, Z : Axis_Data;
+        --X, Y, Z : Axis_Data;
        
       
         timer : Time;
@@ -75,11 +93,41 @@ package body TaskControl is
         dt : Time_Span;
         
     begin
+        Radio.Setup(RadioFrequency => 2511,
+                    Length => 3+12,
+                    Version => 12,
+                    Group => 1,
+                    Protocol => 14);
+        Radio.StartReceiving;
         loop
             timer := Clock;
-            if (state = Radio)
+            if (state = Remote)
             then
-                null;
+                while Radio.DataReady loop
+                    RXdata := Radio.Receive;
+                    
+                    -- Button states
+                    if RXdata.Payload(7) = 2#001# then
+                        button.a := True;
+                    else
+                        button.a := False;
+                    end if;
+                    if RXdata.Payload(7) = 2#010# then
+                        button.b := True;
+                    else
+                        button.b := False;
+                    end if;
+                    if RXdata.Payload(7) = 2#100# then
+                        button.touch := True; 
+                    else
+                        button.touch := False;
+                    end if;
+                    
+                    
+                    
+                    
+                    
+                end loop;
             end if;
             dt := Clock - timer;
             --Put_Line("Radio:");
@@ -92,82 +140,106 @@ package body TaskControl is
     
     
     -- Think
-    task body Avoid is
-        package front_pid is new PID(Kp => -0.75, Ki => 0.0, Kd => 0.0, name => "front_avd");
-        package left_pid  is new PID(Kp => -0.75, Ki => 0.0, Kd => 0.0, name => "left_avd");
-        package right_pid is new PID(Kp => -0.75, Ki => 0.0, Kd => 0.0, name => "right_avd");
+    task body AvoidFront is
+        PERIOD : Time_Span := Milliseconds(80);
         timer : Time;
-        PERIOD : Time_Span := Milliseconds(50);
         dt : Time_Span;
     begin
         loop
             timer := Clock;
-            if (state = Avoiding)
+            if state = AvoidingFront
             then
-                forward_pwr := front_pid.regulate(40, Integer(distance_front));
-                left_pwr    := left_pid.regulate (40, Integer(distance_left));
-                right_pwr   := right_pid.regulate(40, Integer(distance_right));
+                rf_pwm := -4095;
+                rb_pwm := -4095;
+                lf_pwm := -4095;
+                lb_pwm := -4095;
             end if;
             dt := Clock - timer;
-            --Put_Line("Avoid:");
-            --Put_Line("PERIOD= " & To_Duration(PERIOD)'Image);
-            --Put_Line("dt= " & To_Duration(dt)'Image);
-            --Put_Line("diff= " & To_Duration(PERIOD - dt)'Image);
             delay until Clock + PERIOD;
         end loop;
-    end Avoid;    
+    end AvoidFront;
     
-    task body Combine_Values is
-        denominator : Integer;
+    task body AvoidLeft is
+        PERIOD : Time_Span := Milliseconds(80);
         timer : Time;
-        PERIOD : Time_Span := Milliseconds(50);
         dt : Time_Span;
     begin
         loop
             timer := Clock;
-            denominator := abs(forward_pwr) + abs(right_pwr);
-            if (denominator < 1)
+            if state = AvoidingLeft
             then
-                denominator := 1;
+                rf_pwm := -4095;
+                rb_pwm := 4095;
+                lf_pwm := 4095;
+                lb_pwm := -4095;
             end if;
-            
-            rf_pwm := ((forward_pwr - right_pwr + left_pwr) / denominator) * 4095;
-            rb_pwm := ((forward_pwr + right_pwr - left_pwr) / denominator) * 4095;
-            lf_pwm := ((forward_pwr + right_pwr - left_pwr) / denominator) * 4095;
-            lb_pwm := ((forward_pwr - right_pwr + left_pwr) / denominator) * 4095;
             dt := Clock - timer;
-            --Put_Line("Combine:");
-            --Put_Line("PERIOD= " & To_Duration(PERIOD)'Image);
-            --Put_Line("dt= " & To_Duration(dt)'Image);
-            --Put_Line("diff= " & To_Duration(PERIOD - dt)'Image);
             delay until Clock + PERIOD;
         end loop;
-    end Combine_Values;
+    end AvoidLeft;
+    
+    task body AvoidRight is
+        PERIOD : Time_Span := Milliseconds(80);
+        timer : Time;
+        dt : Time_Span;
+    begin
+        loop
+            timer := Clock;
+            if state = AvoidingRight
+            then
+                rf_pwm := 4095;
+                rb_pwm := -4095;
+                lf_pwm := -4095;
+                lb_pwm := 4095;
+            end if;
+            dt := Clock - timer;
+            delay until Clock + PERIOD;
+        end loop;
+    end AvoidRight;
+    
+    task body Stopping is
+        PERIOD : Time_Span := Milliseconds(80);
+        timer : Time;
+        dt : Time_Span;
+    begin
+        loop
+            timer := Clock;
+            if state = Idle
+            then
+                rf_pwm := 0;
+                rb_pwm := 0;
+                lf_pwm := 0;
+                lb_pwm := 0;
+            end if;
+            dt := Clock - timer;
+            delay until Clock + PERIOD;
+        end loop;
+        
+    end Stopping;
+    
     
     -- Act
     task body Motor_Control is
         speeds : Speeds2;
         timer : Time;
-        PERIOD : Time_Span := Milliseconds(50);
+        PERIOD : Time_Span := Milliseconds(80);
         dt : Time_Span;
     begin
         loop
             timer := Clock;
-            case state is   
-            when Idle =>
-                speeds := (0,0,0,0);
-            when others =>
-                speeds := (lf_pwm, rf_pwm, lb_pwm, rb_pwm);
+            speeds := (rf_pwm, rb_pwm, lf_pwm, lb_pwm);
+            case state is
+                when Idle => Drive(Stop);
+                when others => Drive3(speeds);
             end case;
-            
-            Drive3(speeds);
             dt := Clock - timer;
             --Put_Line("Motor Control:");
             --Put_Line("PERIOD= " & To_Duration(PERIOD)'Image);
             --Put_Line("dt= " & To_Duration(dt)'Image);
             --Put_Line("diff= " & To_Duration(PERIOD - dt)'Image);
             delay until Clock + PERIOD;
-        end loop;
+       
+            end loop;
     end Motor_Control;
     
 
