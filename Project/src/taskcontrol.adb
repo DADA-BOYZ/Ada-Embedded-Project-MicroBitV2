@@ -1,7 +1,9 @@
 with MicroBit.Ultrasonic; 
+with MicroBit.Radio; use MicroBit.Radio;
 with MicroBit.MotorDriver; use MicroBit.MotorDriver;
 with Ada.Real_Time; use Ada.Real_Time;
 with MicroBit.Console; use MicroBit.Console;
+with LSM303AGR; use LSM303AGR;
 with PID;
 use MicroBit;
 
@@ -63,9 +65,15 @@ package body TaskControl is
     
     
     task body Read_Radio is
+        
+        RXdata : RadioData;
+        X, Y, Z : Axis_Data;
+       
+      
         timer : Time;
         PERIOD : Time_Span := Milliseconds(100);
         dt : Time_Span;
+        
     begin
         loop
             timer := Clock;
