@@ -22,12 +22,12 @@ procedure Main is
 
 begin
 
-   TxData.Length := 3+12;
+   TxData.Length := 3+7;
    TxData.Version := 12;
    TxData.Group := 1;
    TxData.Protocol := 14;
 
-   Radio.Setup(RadioFrequency => 2407,
+   Radio.Setup(RadioFrequency => 2511,
                Length => TxData.Length,
                Version => TxData.Version,
                Group => TxData.Group,
@@ -60,66 +60,35 @@ begin
       MicroBit.DisplayRT.Clear;
       if X > Threshold then
          MicroBit.DisplayRT.Symbols.Left_Arrow;
-
-
-         TxData.Payload(7) := 2#0000_0100#;  --ROW1
-         TxData.Payload(8) := 2#0000_1000#;  --ROW2
-         TxData.Payload(9) := 2#0001_1111#;  --ROW3
-         TxData.Payload(10) := 2#0000_1000#;  --ROW4
-         TxData.Payload(11) := 2#0000_0100#;  --ROW5
          Put_Line("X > Treshold");
       elsif X < -Threshold then
          MicroBit.DisplayRT.Symbols.Right_Arrow;
-
-         TxData.Payload(7) := 2#0000_0100#;  --ROW1
-         TxData.Payload(8) := 2#0000_0010#;  --ROW2
-         TxData.Payload(9) := 2#0001_1111#;  --ROW3
-         TxData.Payload(10) := 2#0000_0010#;  --ROW4
-         TxData.Payload(11) := 2#0000_0100#;  --ROW5
          Put_Line("X < -Treshold");
       elsif Y > Threshold then
          DisplayRT.Symbols.Up_Arrow;
-
-         TxData.Payload(7) := 2#0000_0100#;  --ROW1
-         TxData.Payload(8) := 2#0000_1110#;  --ROW2
-         TxData.Payload(9) := 2#0001_0101#;  --ROW3
-         TxData.Payload(10) := 2#0000_0100#;  --ROW4
-         TxData.Payload(11) := 2#0000_0100#;  --ROW5
          Put_Line("Y > Treshold");
       elsif Y < -Threshold then
          MicroBit.DisplayRT.Symbols.Down_Arrow;
-
-         TxData.Payload(7) := 2#0000_0100#;  --ROW1
-         TxData.Payload(8) := 2#0000_0100#;  --ROW2
-         TxData.Payload(9) := 2#0001_0101#;  --ROW3
-         TxData.Payload(10) := 2#0000_1110#;  --ROW4
-         TxData.Payload(11) := 2#0000_0100#;  --ROW5
          Put_Line("Y < -Threshold");
       else
          MicroBit.DisplayRT.Symbols.Heart;
-
-         TxData.Payload(7) := 2#0000_1010#;  --ROW1
-         TxData.Payload(8) := 2#0001_0101#;  --ROW2
-         TxData.Payload(9) := 2#0001_0001#;  --ROW3
-         TxData.Payload(10) := 2#0000_1010#;  --ROW4
-         TxData.Payload(11) := 2#0000_0100#;  --ROW5
          Put_Line("Stable");
       end if;
 
 
       -- Resets Buttons
-      TxData.Payload(12) := 2#0000_0000#;
+      TxData.Payload(7) := 2#0000_0000#;
 
       if MicroBit.Buttons.State (Button_A) = Pressed then
-         TxData.Payload(12) := 2#001#;
+         TxData.Payload(7) := 2#001#;
          Put_Line("Button A pressed");
 
       elsif MicroBit.Buttons.State (Button_B) = Pressed then
-         TxData.Payload(12) := 2#010#;
+         TxData.Payload(7) := 2#010#;
          Put_Line("Button B pressed");
 
       elsif MicroBit.Buttons.State (Logo) = Pressed then
-         TxData.Payload(12) := 2#100#;
+         TxData.Payload(7) := 2#100#;
          Put_Line("Logo pressed");
       end if;
       Radio.Transmit(TxData);
