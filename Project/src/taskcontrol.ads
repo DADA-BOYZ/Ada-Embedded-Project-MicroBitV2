@@ -1,10 +1,11 @@
 with MicroBit.Types; use MicroBit.Types;
+with LSM303AGR; use LSM303AGR;
 
 package TaskControl is
     
     -- Sense
     task Read_Distance_Sensors with Priority => 3;
-    task Read_Radio with Priority => 0;
+    task Read_Radio with Priority => 3;
     
     -- Think
     --task Avoid with Priority => 3;
@@ -22,37 +23,40 @@ package TaskControl is
     type States is (Idle, Remote, AvoidingFront, AvoidingLeft, AvoidingRight);
     state : States := Idle;
     
-    rf_pwm : Integer := 0;
-    rb_pwm : Integer := 0;
-    lf_pwm : Integer := 0;
-    lb_pwm : Integer := 0;
+    type PWMs is record
+        rf : Integer := 0;
+        rb : Integer := 0;
+        lf : Integer := 0;
+        lb : Integer := 0;
+    end record;
+    pwm : PWMs;
     
+    type power is record
+        forward : Integer := 0; -- Positive => Forward
+        strafe  : Integer := 0;   -- Positive => Left
+        rotate   : Integer := 0; -- Positive => Right
+    end record;
+    pwr : power;
+        
     type Distances is record
         front : Distance_cm := 0;
         left  : Distance_cm := 0;
         right : Distance_cm := 0;
     end record;
-    
     distance : Distances;
-    
-    backward_pwr : Integer := 0; -- Positive => Forward
-    left_pwr  : Integer := 0;   -- Positive => Left
-    right_pwr   : Integer := 0; -- Positive => Right
     
     type button_states is record
         a : Boolean := False;
         b : Boolean := False;
         touch : Boolean := False;
     end record;
-    
     button : button_states;
     
     type acc_directions is record
-        x : Boolean;
-        y : Boolean;
-        z : Boolean;
+        X : Axis_Data := 0;
+        Y : Axis_Data := 0;
+        Z : Axis_Data := 0;
     end record;
-    
     acc : acc_directions;
     
 end TaskControl;
