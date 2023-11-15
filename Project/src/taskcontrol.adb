@@ -22,12 +22,11 @@ package body TaskControl is
         dt : Time_Span;
     begin
         loop
-            distance.front := front_sensor.Read;
-            
-            distance.left  := left_sensor.Read;
             timer := Clock;
+            distance.front := front_sensor.Read;
+            distance.left  := left_sensor.Read;
             distance.right := right_sensor.Read;
-            dt := Clock - timer;
+            
             if distance.front = 0 or distance.front > 40
             then
                 distance.front := 40;
@@ -71,7 +70,7 @@ package body TaskControl is
             end if;
             Put_Line("state=" & state'Image);
             
-            
+            dt := Clock - timer;
             --Put_Line("RDS:");
             --Put_Line("PERIOD= " & To_Duration(PERIOD)'Image);
             --Put_Line("dt= " & To_Duration(dt)'Image);
@@ -83,13 +82,14 @@ package body TaskControl is
     
     task body Read_Radio is
         RXdata : RadioData;
+        Threshold : constant := 20;
         timer : Time;
-        PERIOD : Time_Span := Milliseconds(100);
+        PERIOD : Time_Span := Milliseconds(20);
         dt : Time_Span;
         
     begin
         Radio.Setup(RadioFrequency => 2511,
-                    Length => 3+7,
+                    Length => 3+5,
                     Version => 12,
                     Group => 1,
                     Protocol => 14);
@@ -98,27 +98,55 @@ package body TaskControl is
             timer := Clock;
             while Radio.DataReady loop
                 RXdata := Radio.Receive;
+                
                 -- Button states
-                if RXdata.Payload(7) = 2#001# then
+                if RXdata.Payload(5) = 2#001# then
                     button.a := True;
+                    Put_Line("A");
                 else
                     button.a := False;
                 end if;
-                if RXdata.Payload(7) = 2#010# then
+                if RXdata.Payload(5) = 2#010# then
                     button.b := True;
+                    Put_Line("B");
                 else
                     button.b := False;
                 end if;
-                if RXdata.Payload(7) = 2#100# then
+                if RXdata.Payload(5) = 2#100# then
                     button.touch := True; 
+                    Put_Line("Touch");
                 else
                     button.touch := False;
+                end if;
+                
+                -- Buttons determine rotation
+                if button.a and not button.b then
+                    acc.Rot := -2**9;
+                    Put_Line("A not B");
+                elsif not button.a and button.b then
+                    acc.Rot := 2**9 - 1;
+                    Put_Line("B not A");
+                else
+                    acc.Rot := 0;
                 end if;
                 
                 -- Accelerometer states
                 acc.X := LSM303AGR.Convert(RXdata.Payload(1), RXdata.Payload(2)) * Axis_Data(-1);
                 acc.Y := LSM303AGR.Convert(RXdata.Payload(3), RXdata.Payload(4));
-                acc.Z := LSM303AGR.Convert(RXdata.Payload(5), RXdata.Payload(6));
+                
+                if abs(acc.X) < Threshold then
+                    acc.X := 0;
+                end if;
+                if abs(acc.Y) < Threshold then
+                    acc.Y := 0;
+                end if;
+                
+                -- Safe state when touch button is pressed
+                if button.touch then
+                    acc.X := 0;
+                    acc.y := 0;
+                    acc.Rot := 0;
+                end if;
                 
             end loop;
             dt := Clock - timer;
@@ -132,7 +160,7 @@ package body TaskControl is
     
     
     -- Think
-    task body AvoidFront is
+    task body Avoid_Front is
         PERIOD : Time_Span := Milliseconds(80);
         timer : Time;
         dt : Time_Span;
@@ -149,9 +177,9 @@ package body TaskControl is
             dt := Clock - timer;
             delay until Clock + PERIOD;
         end loop;
-    end AvoidFront;
+    end Avoid_Front;
     
-    task body AvoidLeft is
+    task body Avoid_Left is
         PERIOD : Time_Span := Milliseconds(80);
         timer : Time;
         dt : Time_Span;
@@ -168,9 +196,9 @@ package body TaskControl is
             dt := Clock - timer;
             delay until Clock + PERIOD;
         end loop;
-    end AvoidLeft;
+    end Avoid_Left;
     
-    task body AvoidRight is
+    task body Avoid_Right is
         PERIOD : Time_Span := Milliseconds(80);
         timer : Time;
         dt : Time_Span;
@@ -187,7 +215,7 @@ package body TaskControl is
             dt := Clock - timer;
             delay until Clock + PERIOD;
         end loop;
-    end AvoidRight;
+    end Avoid_Right;
     
     task body Stopping is
         PERIOD : Time_Span := Milliseconds(80);
@@ -209,13 +237,42 @@ package body TaskControl is
         
     end Stopping;
     
+    task body Move_Remote is
+        denominator : Integer;
+        factor : constant := 8;
+        timer : Time;
+        PERIOD : Time_Span := Milliseconds(20);
+        dt : Time_Span;
+    begin
+        loop
+            timer := Clock;
+            if state = Remote then
+                denominator := abs(Integer(acc.Y)*factor) + abs(Integer(acc.X)*factor) + abs(Integer(acc.Rot)*factor);
+                if (denominator < 1)
+                then
+                    denominator := 1;
+                end if;
+                
+                pwm.rf := Clamp(-4095, 4095, Integer(acc.Y*factor + acc.X*factor - acc.Rot*factor/2));
+                pwm.rb := Clamp(-4095, 4095, Integer(acc.Y*factor - acc.X*factor - acc.Rot*factor/2));
+                pwm.lf := Clamp(-4095, 4095, Integer(acc.Y*factor - acc.X*factor + acc.Rot*factor/2));
+                pwm.lb := Clamp(-4095, 4095, Integer(acc.Y*factor + acc.X*factor + acc.Rot*factor/2));
+                
+                dt := Clock - timer;
+                --Put_Line("Combine:");
+                --Put_Line("PERIOD= " & To_Duration(PERIOD)'Image);
+                --Put_Line("dt= " & To_Duration(dt)'Image);
+                --Put_Line("diff= " & To_Duration(PERIOD - dt)'Image);
+            end if;
+            delay until Clock + PERIOD;
+        end loop;
+    end Move_Remote;
     
     -- Act
     task body Motor_Control is
-        Threshold : constant := 150;
+        Threshold : constant := 100;
         speeds : Speeds2;
-        factor : constant := 8;
-        
+
         timer : Time;
         PERIOD : Time_Span := Milliseconds(80);
         dt : Time_Span;
@@ -225,23 +282,6 @@ package body TaskControl is
             speeds := (pwm.rf, pwm.rb, pwm.lf, pwm.lb);
             case state is
                 when Idle => Drive(Stop);
-                when Remote => 
-                    Put_Line("HELLO");
-                    if acc.X >= Threshold then
-                        -- Right
-                        Drive3((-Integer(acc.X * factor), Integer(acc.X * factor), Integer(acc.X * factor), -Integer(acc.X * factor)));
-                    elsif acc.X <= - Threshold then
-                        -- Left
-                        Drive3((Integer(acc.X * factor), -Integer(acc.X * factor), -Integer(acc.X * factor), Integer(acc.X * factor)));
-                    elsif acc.Y >= Threshold then
-                        -- Backward
-                        Drive3((-Integer(acc.Y * factor), -Integer(acc.Y * factor), -Integer(acc.Y * factor), -Integer(acc.Y * factor)));
-                    elsif acc.Y <= -Threshold then
-                        -- Forward
-                        Drive3((Integer(acc.Y * factor), Integer(acc.Y * factor), Integer(acc.Y * factor), Integer(acc.Y * factor)));
-                    else
-                        Drive(Stop);
-                    end if;
                 when others => Drive3(speeds);
             end case;
             dt := Clock - timer;
@@ -250,9 +290,19 @@ package body TaskControl is
             --Put_Line("dt= " & To_Duration(dt)'Image);
             --Put_Line("diff= " & To_Duration(PERIOD - dt)'Image);
             delay until Clock + PERIOD;
-       
             end loop;
     end Motor_Control;
+    
+    function Clamp(min : Integer; max : Integer; value : Integer) return Integer is
+    begin
+        if value < min then
+            return min;
+        elsif value > max then
+            return max;
+        else
+            return value;
+        end if; 
+    end Clamp;
     
 
 end TaskControl;
