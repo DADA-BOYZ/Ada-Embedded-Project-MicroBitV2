@@ -1,24 +1,25 @@
 with MicroBit.Types; use MicroBit.Types;
+with MicroBit.Radio; use MicroBit.Radio;
 with LSM303AGR; use LSM303AGR;
 
 package TaskControl is
     
     -- Sense
-    task Read_Radio with Priority => 3;
-    task Read_Distance_Sensors with Priority => 3;
-    
+    task Read_Radio with Priority => 4;
+    task Read_Distance_Sensors with Priority => 4;
     
     -- Think
-    task Stopping with Priority => 2;
-    task Move_Remote with Priority => 2;
-    task Avoid_Left with Priority => 2;
-    task Avoid_Front with Priority => 2;
-    task Avoid_Right with Priority => 2;
+    task Determine_State with Priority => 3;
+    task Determine_Radio with Priority => 3;
     
     -- Act
+    task Avoid with Priority => 2;
+    task Move_Radio with Priority => 2;
     task Motor_Control with Priority => 1;
     
-    private
+private
+    
+    RXdata : RadioData;
     
     -- State Machine
     type States is (Idle, Remote, AvoidingFront, AvoidingLeft, AvoidingRight);
