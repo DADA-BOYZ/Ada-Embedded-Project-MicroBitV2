@@ -73,6 +73,9 @@ package ada_main is
    --  system.traceback_entries%b
    --  system.unsigned_types%s
    --  interfaces.nrf52.rtc%s
+   --  system.img_uns%s
+   --  system.img_util%s
+   --  system.img_util%b
    --  system.wch_con%s
    --  system.wch_con%b
    --  system.wch_jis%s
@@ -83,6 +86,7 @@ package ada_main is
    --  system.address_image%b
    --  system.compare_array_unsigned_8%s
    --  system.compare_array_unsigned_8%b
+   --  system.exn_lli%s
    --  system.traceback%s
    --  system.traceback%b
    --  ada.strings.utf_encoding%s
@@ -160,12 +164,15 @@ package ada_main is
    --  ada.assertions%b
    --  ada.streams%s
    --  ada.streams%b
+   --  system.arith_64%s
+   --  system.arith_64%b
    --  system.fat_flt%s
    --  system.fat_lflt%s
    --  system.fat_llf%s
    --  system.finalization_root%s
    --  system.finalization_root%b
    --  ada.finalization%s
+   --  system.img_fixed_64%s
    --  system.storage_pools%s
    --  system.storage_pools%b
    --  system.finalization_masters%s

@@ -15,18 +15,17 @@ use MicroBit;
 procedure Main is
 
    Data: All_Axes_Data_Raw;
-   Threshold : constant := 150;
    MyClock : Time;
    TxData : Radio.RadioData;
-   X, Y, Z : Axis_Data;
 
 begin
 
-   TxData.Length := 3+7;
+   TxData.Length := 3+5;
    TxData.Version := 12;
    TxData.Group := 1;
    TxData.Protocol := 14;
 
+	-- Setup for radio: Frequency, length, version, group and protocol for data transfer
    Radio.Setup(RadioFrequency => 2511,
                Length => TxData.Length,
                Version => TxData.Version,
@@ -46,55 +45,33 @@ begin
 
       Data := Accelerometer.AccelDataRaw;
 
+		-- Sets payload for X and Y acc data from MicroBit.
       TxData.Payload(1) := Data.X.Low;
       TxData.Payload(2) := Data.X.High;
       TxData.Payload(3) := Data.Y.Low;
       TxData.Payload(4) := Data.Y.High;
-      TxData.Payload(5) := Data.Z.Low;
-      TxData.Payload(6) := Data.Z.High;
-
-      X := LSM303AGR.Convert(Data.X.Low, Data.X.High) * Axis_Data (-1);
-      Y := LSM303AGR.Convert(Data.Y.Low, Data.Y.High);
-      Z := LSM303AGR.Convert(Data.Z.Low, Data.Z.High);
-
-      MicroBit.DisplayRT.Clear;
-      if X > Threshold then
-         MicroBit.DisplayRT.Symbols.Left_Arrow;
-         Put_Line("X > Treshold");
-      elsif X < -Threshold then
-         MicroBit.DisplayRT.Symbols.Right_Arrow;
-         Put_Line("X < -Treshold");
-      elsif Y > Threshold then
-         DisplayRT.Symbols.Up_Arrow;
-         Put_Line("Y > Treshold");
-      elsif Y < -Threshold then
-         MicroBit.DisplayRT.Symbols.Down_Arrow;
-         Put_Line("Y < -Threshold");
-      else
-         MicroBit.DisplayRT.Symbols.Heart;
-         Put_Line("Stable");
-      end if;
 
 
       -- Resets Buttons
-      TxData.Payload(7) := 2#0000_0000#;
+      TxData.Payload(5) := 2#0000_0000#;
 
-      if MicroBit.Buttons.State (Button_A) = Pressed then
-         TxData.Payload(7) := 2#001#;
-         Put_Line("Button A pressed");
+		-- If button A is pressed and not Button B
+      if (MicroBit.Buttons.State (Button_A) = Pressed) and not (MicroBit.Buttons.State (Button_B) = Pressed) then
+         TxData.Payload(5) := 2#001#;
 
-      elsif MicroBit.Buttons.State (Button_B) = Pressed then
-         TxData.Payload(7) := 2#010#;
-         Put_Line("Button B pressed");
+		-- If button B is pressed and not Button A
+      elsif (MicroBit.Buttons.State (Button_B) = Pressed) and not (MicroBit.Buttons.State (Button_A) = Pressed) then
+         TxData.Payload(5) := 2#010#;
 
+		-- If Logo is pressed.
       elsif MicroBit.Buttons.State (Logo) = Pressed then
-         TxData.Payload(7) := 2#100#;
-         Put_Line("Logo pressed");
-      end if;
-      Radio.Transmit(TxData);
-      Put_Line("Transmitted Data over Radio");
+         TxData.Payload(5) := 2#100#;
+		end if;
 
-      delay until MyClock + Milliseconds(50);
+		-- Transmits Data
+      Radio.Transmit(TxData);
+		Put_Line("Loop Time = " & To_Duration(Clock - MyClock)'Image);
+      delay until MyClock + Milliseconds(20);
 
    end loop;
 end Main;
