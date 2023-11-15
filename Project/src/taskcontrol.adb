@@ -20,6 +20,7 @@ package body TaskControl is
         timer : Time;
         PERIOD : constant Time_Span := Milliseconds(80);
         dt : Time_Span;
+        max_dt : Time_Span := Clock - Clock;
     begin
         loop
             timer := Clock;
@@ -27,6 +28,14 @@ package body TaskControl is
             distance.left  := left_sensor.Read;
             distance.right := right_sensor.Read;
             dt := Clock - timer;
+            if dt > max_dt then
+                max_dt := dt;
+            end if;
+            if dt > PERIOD then
+                deadlines_missed.amount := deadlines_missed.amount + 1; 
+                deadlines_missed.name := "RS";
+            end if;
+            Put_Line("RDS: Max_dt= " & To_Duration(max_dt)'Image);
             --Put_Line("Read_Distance_Sensors:");
             --Put_Line("PERIOD= " & To_Duration(PERIOD)'Image);
             --Put_Line("dt= " & To_Duration(dt)'Image);
@@ -53,10 +62,10 @@ package body TaskControl is
                 RXdata := Radio.Receive;
             end loop;
             dt := Clock - timer;
-            --Put_Line("Read_Radio:");
-            --Put_Line("PERIOD= " & To_Duration(PERIOD)'Image);
-            --Put_Line("dt= " & To_Duration(dt)'Image);
-            --Put_Line("diff= " & To_Duration(PERIOD - dt)'Image);
+            if dt > PERIOD then
+                deadlines_missed.amount := deadlines_missed.amount + 1; 
+                deadlines_missed.name := "RR";
+            end if;
             delay until Clock + PERIOD;
         end loop;
     end Read_Radio;
@@ -109,6 +118,10 @@ package body TaskControl is
             
             Put_Line("state=" & state'Image);
             dt := Clock - timer;
+            if dt > PERIOD then
+                deadlines_missed.amount := deadlines_missed.amount + 1; 
+                deadlines_missed.name := "DS";
+            end if;
             delay until Clock + PERIOD;
         end loop;
     end Determine_State;
@@ -174,6 +187,10 @@ package body TaskControl is
             end if;
             
             dt := Clock - timer;
+            if dt > PERIOD then
+                deadlines_missed.amount := deadlines_missed.amount + 1; 
+                deadlines_missed.name := "DR";
+            end if;
             delay until Clock + PERIOD;
         end loop;
     end Determine_Radio;
@@ -204,6 +221,10 @@ package body TaskControl is
                 pwm.lb := 4095;
             end if;
             dt := Clock - timer;
+            if dt > PERIOD then
+                deadlines_missed.amount := deadlines_missed.amount + 1; 
+                deadlines_missed.name := "AV";
+            end if;
             delay until Clock + PERIOD;
         end loop;
     end Avoid;
@@ -231,6 +252,10 @@ package body TaskControl is
                 pwm.lb := Clamp(-4095, 4095, Integer(acc.Y*Factor + acc.X*Factor + acc.Rot*Factor/2));
                 
                 dt := Clock - timer;
+                if dt > PERIOD then
+                    deadlines_missed.amount := deadlines_missed.amount + 1; 
+                    deadlines_missed.name := "MR";
+                end if;
             end if;
             delay until Clock + PERIOD;
         end loop;
@@ -243,6 +268,7 @@ package body TaskControl is
         timer : Time;
         PERIOD : constant Time_Span := Milliseconds(80);
         dt : Time_Span;
+        max_dt : Time_Span := Clock - Clock;
     begin
         loop
             timer := Clock;
@@ -252,6 +278,16 @@ package body TaskControl is
                 when others => Drive3(speeds);
             end case;
             dt := Clock - timer;
+            if dt > PERIOD then
+                deadlines_missed.amount := deadlines_missed.amount + 1; 
+            end if;
+            if dt > PERIOD then
+                deadlines_missed.amount := deadlines_missed.amount + 1; 
+                deadlines_missed.name := "MC";
+            end if;
+            Put_Line("Motor_Control: Max_dt=" & To_Duration(max_dt)'Image);
+            Put_Line("Deadlines Missed=" & deadlines_missed.amount'Image);
+            Put_Line("Deadlines Name=" & deadlines_missed.name);
             delay until Clock + PERIOD;
             end loop;
     end Motor_Control;

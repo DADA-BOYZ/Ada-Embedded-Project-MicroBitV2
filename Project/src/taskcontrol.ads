@@ -2,7 +2,12 @@ with MicroBit.Types; use MicroBit.Types;
 with MicroBit.Radio; use MicroBit.Radio;
 with LSM303AGR; use LSM303AGR;
 
+
+
+
 package TaskControl is
+    
+    pragma Elaborate_Body(TaskControl);
     
     -- Sense
     task Read_Radio with Priority => 4;
@@ -18,6 +23,8 @@ package TaskControl is
     task Motor_Control with Priority => 1;
     
 private
+    
+    
     
     RXdata : RadioData;
     
@@ -53,6 +60,13 @@ private
         Rot : Axis_Data := 0;
     end record;
     acc : Acc_Directions;
+    
+    type Deadlines is record
+        amount : Integer := 0;
+        name : String(1 .. 2) := "XX";
+    end record;
+    
+    deadlines_missed : Deadlines;
     
     function Clamp(min : Integer; max : Integer; value : Integer) return Integer;
     
