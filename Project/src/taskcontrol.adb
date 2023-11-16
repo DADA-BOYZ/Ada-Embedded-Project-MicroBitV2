@@ -12,42 +12,70 @@ package body TaskControl is
 
 
     -- Sense
-    task body Read_Distance_Sensors is
+    task body Read_Distance_Sensor_Front is
         package front_sensor is new Ultrasonic(MB_P2,  MB_P0);
-        package left_sensor  is new Ultrasonic(MB_P15, MB_P13);
-        package right_sensor is new Ultrasonic(MB_P1,  MB_P16);
         
         timer : Time;
-        PERIOD : constant Time_Span := Milliseconds(80);
         dt : Time_Span;
         max_dt : Time_Span := Clock - Clock;
     begin
         loop
             timer := Clock;
             distance.front := front_sensor.Read;
+            dt := Clock - timer;
+            if dt > max_dt then
+                max_dt := dt;
+            end if;
+            if dt > PERIOD.DR then
+                deadlines_missed.amount := deadlines_missed.amount + 1; 
+                deadlines_missed.name := "RF";
+            end if;
+            Put_Line("RF: Max_dt= " & To_Duration(max_dt)'Image);
+            delay until Clock + PERIOD.RSF;
+        end loop;
+    end Read_Distance_Sensor_Front;
+    
+    task body Read_Distance_Sensor_Left is
+        package left_sensor  is new Ultrasonic(MB_P15, MB_P13);
+        
+        timer : Time;
+        dt : Time_Span;
+        max_dt : Time_Span := Clock - Clock;
+    begin
+        loop
+            timer := Clock;
             distance.left  := left_sensor.Read;
+            dt := Clock - timer;
+            if dt > max_dt then
+                max_dt := dt;
+            end if;
+            Put_Line("RL: Max_dt= " & To_Duration(max_dt)'Image);
+            delay until Clock + PERIOD.RSL;
+        end loop;
+    end Read_Distance_Sensor_Left;
+    
+    task body Read_Distance_Sensor_Right is
+        package right_sensor is new Ultrasonic(MB_P1,  MB_P16);
+        
+        timer : Time;
+        dt : Time_Span;
+        max_dt : Time_Span := Clock - Clock;
+    begin
+        loop
+            timer := Clock;
             distance.right := right_sensor.Read;
             dt := Clock - timer;
             if dt > max_dt then
                 max_dt := dt;
             end if;
-            if dt > PERIOD then
-                deadlines_missed.amount := deadlines_missed.amount + 1; 
-                deadlines_missed.name := "RS";
-            end if;
-            Put_Line("RDS: Max_dt= " & To_Duration(max_dt)'Image);
-            --Put_Line("Read_Distance_Sensors:");
-            --Put_Line("PERIOD= " & To_Duration(PERIOD)'Image);
-            --Put_Line("dt= " & To_Duration(dt)'Image);
-            --Put_Line("diff= " & To_Duration(PERIOD - dt)'Image);
-            delay until Clock + PERIOD;
+            Put_Line("RR: Max_dt= " & To_Duration(max_dt)'Image);
+            delay until Clock + PERIOD.RSR;
         end loop;
-    end Read_Distance_Sensors;
+    end Read_Distance_Sensor_Right;
     
     
     task body Read_Radio is
         timer : Time;
-        PERIOD : constant Time_Span := Milliseconds(20);
         dt : Time_Span;
     begin
         Radio.Setup(RadioFrequency => 2511,
@@ -58,15 +86,11 @@ package body TaskControl is
         Radio.StartReceiving;
         loop
             timer := Clock;
-            while Radio.DataReady loop
+            if Radio.DataReady then
                 RXdata := Radio.Receive;
-            end loop;
-            dt := Clock - timer;
-            if dt > PERIOD then
-                deadlines_missed.amount := deadlines_missed.amount + 1; 
-                deadlines_missed.name := "RR";
             end if;
-            delay until Clock + PERIOD;
+            dt := Clock - timer;
+            delay until Clock + PERIOD.RR;
         end loop;
     end Read_Radio;
     
@@ -76,7 +100,6 @@ package body TaskControl is
         minimum_distance : Distance_cm;
         
         timer : Time;
-        PERIOD : constant Time_Span := Milliseconds(80);
         dt : Time_Span;
     begin
         loop
@@ -118,19 +141,14 @@ package body TaskControl is
             
             Put_Line("state=" & state'Image);
             dt := Clock - timer;
-            if dt > PERIOD then
-                deadlines_missed.amount := deadlines_missed.amount + 1; 
-                deadlines_missed.name := "DS";
-            end if;
-            delay until Clock + PERIOD;
+            delay until Clock + PERIOD.DS;
         end loop;
     end Determine_State;
 
     
     task body Determine_Radio is
-        THRESHOLD : constant := 20;
+        THRESHOLD : constant := 50;
         
-        PERIOD : constant Time_Span := Milliseconds(20);
         timer : Time;
         dt : Time_Span;
     begin
@@ -187,18 +205,14 @@ package body TaskControl is
             end if;
             
             dt := Clock - timer;
-            if dt > PERIOD then
-                deadlines_missed.amount := deadlines_missed.amount + 1; 
-                deadlines_missed.name := "DR";
-            end if;
-            delay until Clock + PERIOD;
+
+            delay until Clock + PERIOD.DR;
         end loop;
     end Determine_Radio;
     
     
     -- Act
     task body Avoid is
-        PERIOD : constant Time_Span := Milliseconds(80);
         timer : Time;
         dt : Time_Span;
     begin
@@ -221,11 +235,11 @@ package body TaskControl is
                 pwm.lb := 4095;
             end if;
             dt := Clock - timer;
-            if dt > PERIOD then
+            if dt > PERIOD.AV then
                 deadlines_missed.amount := deadlines_missed.amount + 1; 
                 deadlines_missed.name := "AV";
             end if;
-            delay until Clock + PERIOD;
+            delay until Clock + PERIOD.AV;
         end loop;
     end Avoid;
     
@@ -235,7 +249,6 @@ package body TaskControl is
         FACTOR : constant := 8;
         
         timer : Time;
-        PERIOD : constant Time_Span := Milliseconds(20);
         dt : Time_Span;
     begin
         loop
@@ -252,12 +265,12 @@ package body TaskControl is
                 pwm.lb := Clamp(-4095, 4095, Integer(acc.Y*Factor + acc.X*Factor + acc.Rot*Factor/2));
                 
                 dt := Clock - timer;
-                if dt > PERIOD then
+                if dt > PERIOD.MR then
                     deadlines_missed.amount := deadlines_missed.amount + 1; 
                     deadlines_missed.name := "MR";
                 end if;
             end if;
-            delay until Clock + PERIOD;
+            delay until Clock + PERIOD.MR;
         end loop;
     end Move_Radio;
     
@@ -266,7 +279,6 @@ package body TaskControl is
         speeds : Speeds2;
 
         timer : Time;
-        PERIOD : constant Time_Span := Milliseconds(80);
         dt : Time_Span;
         max_dt : Time_Span := Clock - Clock;
     begin
@@ -278,17 +290,14 @@ package body TaskControl is
                 when others => Drive3(speeds);
             end case;
             dt := Clock - timer;
-            if dt > PERIOD then
-                deadlines_missed.amount := deadlines_missed.amount + 1; 
-            end if;
-            if dt > PERIOD then
+            if dt > PERIOD.MC then
                 deadlines_missed.amount := deadlines_missed.amount + 1; 
                 deadlines_missed.name := "MC";
             end if;
             Put_Line("Motor_Control: Max_dt=" & To_Duration(max_dt)'Image);
             Put_Line("Deadlines Missed=" & deadlines_missed.amount'Image);
             Put_Line("Deadlines Name=" & deadlines_missed.name);
-            delay until Clock + PERIOD;
+            delay until Clock + PERIOD.MC;
             end loop;
     end Motor_Control;
     

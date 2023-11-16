@@ -1,5 +1,6 @@
 with MicroBit.Types; use MicroBit.Types;
 with MicroBit.Radio; use MicroBit.Radio;
+with Ada.Real_Time; use Ada.Real_Time;
 with LSM303AGR; use LSM303AGR;
 
 
@@ -10,27 +11,41 @@ package TaskControl is
     pragma Elaborate_Body(TaskControl);
     
     -- Sense
+    task Read_Distance_Sensor_Front with Priority => 7;
+    task Read_Distance_Sensor_Left with Priority => 6;
+    task Read_Distance_Sensor_Right with Priority => 5;
     task Read_Radio with Priority => 4;
-    task Read_Distance_Sensors with Priority => 4;
     
     -- Think
     task Determine_State with Priority => 3;
-    task Determine_Radio with Priority => 3;
+    task Determine_Radio with Priority => 2;
     
     -- Act
-    task Avoid with Priority => 2;
-    task Move_Radio with Priority => 2;
+    task Avoid with Priority => 1;
+    task Move_Radio with Priority => 1;
     task Motor_Control with Priority => 1;
     
 private
-    
-    
+        
+    type PERIODS is record
+        RSF : Time_Span := Milliseconds(100);
+        RSL : Time_Span := Milliseconds(100);
+        RSR : Time_Span := Milliseconds(100);
+        RR : Time_Span := Milliseconds(100);
+        DS : Time_Span := Milliseconds(100);
+        DR : Time_Span := Milliseconds(100);
+        AV : Time_Span := Milliseconds(100);
+        MR : Time_Span := Milliseconds(100);
+        MC : Time_Span := Milliseconds(100);
+    end record;
+    PERIOD : PERIODS;
     
     RXdata : RadioData;
     
     -- State Machine
     type States is (Idle, Remote, AvoidingFront, AvoidingLeft, AvoidingRight);
     state : States := Idle;
+
     
     type PWMs is record
         rf : Integer := 0;
