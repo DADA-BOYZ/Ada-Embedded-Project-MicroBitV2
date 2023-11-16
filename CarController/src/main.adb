@@ -71,7 +71,7 @@ begin
 		-- Transmits Data
       Radio.Transmit(TxData);
 		Put_Line("Loop Time = " & To_Duration(Clock - MyClock)'Image);
-      delay until MyClock + Milliseconds(20);
+      delay until MyClock + Milliseconds(25);
 
    end loop;
 end Main;
